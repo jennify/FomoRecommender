@@ -1,2 +1,1 @@
-web: gunicorn fomo:fomoapp
-
+web: gunicorn fomo.wsgi
