@@ -7,6 +7,7 @@ Django==1.9.2
 eyes-selenium==2.14
 flake8==2.5.0
 funcsigs==0.4
+gunicorn==19.4.5
 keyring==5.6
 macholib==1.5.1
 matplotlib==1.3.1
