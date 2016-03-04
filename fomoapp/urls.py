@@ -18,6 +18,7 @@ from . import views
 
 urlpatterns = [
     url(r'^$', views.index, name='index'),
-    url(r'^test/$', views.test, name='test'),
+    url(r'^restaurants/$', views.restaurants, name='restaurants'),
+    url(r'^placedetail/$', views.placedetail, name='placedetail'),
 
 ]
