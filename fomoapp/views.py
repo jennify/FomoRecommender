@@ -1,67 +1,174 @@
 from django.shortcuts import render
 
 # Create your views here.
-from django.http import HttpResponse, JsonResponse
+from django.http import (
+    HttpResponse,
+    JsonResponse,
+    HttpResponseBadRequest,
+)
 
 import urllib
 import requests
 import os
-from .models import Attraction
+from .models import Attraction, FullItinerary, User
 
+from django.views.decorators.csrf import csrf_exempt
 
 def index(request):
     return HttpResponse("Welcome to Fomo's home page! Feelings some fomo? Check out: https://github.com/jennify/Fomo")
 
-def restaurants(request):
-    json = GooglePlacesAPIClient.textSearch(search_text='Restaurants')
-    Attraction.createAttractionsFromJSON(json,"FakeGroupID")
-    # attractions =
-    # for attraction in attractions:
-    #     placeID = attraction["place_id"]
-    #     a = Attraction(placeID=placeID, rawData=attraction, groupID="groupID")
-    #     a.save()
-    return JsonResponse({"results":json["results"]})
+def testGooglePlaces(request):
+    assert request.method == "GET"
+    search_text = request.GET["search_text"]
+    # location = request.GET["location"] # "num,num"
+    # radius = request.GET["radius"] # in meters
 
-def placedetail(request):
-    return JsonResponse(GooglePlacesAPIClient.placeDetails())
+    json = GooglePlacesAPIClient.textSearch(search_text=search_text)
+    return JsonResponse(json)
 
 def get_recommendations(request):
     if request.method != "GET":
-        raise Exception("GET Request only.")
+        raise HttpResponseBadRequest("GET Request only.")
 
     groupID = request.GET['groupID']
-    email = request.GET['user_email']
+    # Support personlized recommendations to users later.
+    # email = request.GET['email']
 
     response = {}
-    return JsonResponse({"Email": email})
-    # return JsonResponse(GooglePlacesAPIClient.textSearch(search_text='Restaurants'))
+    a_list = []
+    attractions = Attraction.objects.filter(groupID=groupID)
+    if len(attractions) == 0:
+        print(attractions)
+        raise HttpResponseBadRequest("No attractions or Invalid group ID")
+    for a in attractions:
+        a_list.append(a.encode())
+    response["attractions"] = a_list
 
+    return JsonResponse(response)
+
+def get_itineraries_for_user(request):
+    if request.method != "GET":
+        raise HttpResponseBadRequest("GET Request only.")
+
+    userEmail = request.GET['userEmail']
+    itineraries = FullItinerary.objects.filter(travellers__email=userEmail)
+    i_list = []
+    for i in itineraries:
+        i_list.append(i.encode())
+    return JsonResponse({"itineraries": i_list})
+
+@csrf_exempt
 def update_itinerary_with_vote(request):
-    return JsonResponse({"Statue": "Incomplete"})
+    if request.method != "POST":
+        raise HttpResponseBadRequest("POST Request only.")
 
+    groupID = request.POST['groupID']
+    placeID = request.POST['placeID']
+    userEmail = request.POST['userEmail']
+    user = User.objects.get(email=userEmail)
+    attraction = Attraction.objects.get(placeID=placeID, groupID=groupID)[0]
+
+    vote_points = 0
+    if 'like' in request.POST:
+        vote_points = 1.0
+    elif 'dislike' in request.POST:
+        vote_points = -1.0
+    elif 'neutral' in request.POST:
+        vote_points = 0.0
+    else:
+        raise HttpResponseBadRequest("Invalid Vote")
+
+    vote = Vote.castVote(
+        attraction=attraction,
+        rating=vote_points,
+        user=user)
+
+    json = FullItinerary.objects.filter(groupID=groupID)[0].encode()
+    json["itinerary"]
+    return JsonResponse(json)
+
+@csrf_exempt
 def update_itinerary_with_preference(request):
-    return JsonResponse({"Statue": "Incomplete"})
+    if request.method != "POST":
+        raise HttpResponseBadRequest("POST Request only.")
+    raise NotImplemented()
+    json = FullItinerary.objects.filter(groupID=groupID)[0].encode()
+    return JsonResponse(json)
+
+@csrf_exempt
+def update_itinerary_with_user(request):
+    if request.method != "POST":
+        raise HttpResponseBadRequest("POST Request only.")
+
+    groupID = request.POST['groupID']
+    itinerary = FullItinerary.objects.filter(groupID=groupID)[0]
+
+    email = request.POST['userEmail']
+    name = request.POST['name']
+    if len(User.objects.filter(email=email)) > 0:
+        raise HttpResponseBadRequest("User already exists")
+    new_traveller = User(email=email, name=name)
+    new_traveller.save()
+
+    itinerary.travellers.add(new_traveller)
+    itinerary.save()
+
+    return JsonResponse(itinerary.encode())
 
 def get_itinerary(request):
-    return JsonResponse({"Statue": "Incomplete"})
+    if request.method != "GET":
+        raise HttpResponseBadRequest("GET Request only.")
 
-def add_group(request):
+    groupID = request.GET['groupID']
+    json = FullItinerary.objects.filter(groupID=groupID)[0].encode()
+    return JsonResponse(json)
+
+@csrf_exempt
+def add_itinerary(request):
     if request.method != "POST":
-        raise Exception("POST Request only.")
-        # , groupID, email, firstName, lastName, city
+        raise HttpResponseBadRequest("POST Request only.")
+
     groupID = request.POST['groupID']
-    email = request.POST['email']
+    tripName = request.POST['tripName']
+    email = request.POST['userEmail']
+    name = request.POST['name']
+    radius = request.POST['radius']
+    location = request.POST['location']
+    numDays = int(request.POST['numDays'])
 
-    return JsonResponse({"Email": email})
+    creator = None
+    existing_user = User.objects.filter(email=email)
+    if len(existing_user) <= 0:
+        creator = User(email=email, name=name)
+        creator.save()
+    else:
+        creator = existing_user[0]
 
-def update_group(request):
-    return JsonResponse({"Statue": "Incomplete"})
+    query_itinerary = FullItinerary.objects.filter(groupID=groupID)
+    if len(query_itinerary) <= 0:
+        itinerary = FullItinerary(
+            groupID=groupID,
+            tripName=tripName,
+            numDays=numDays,
+            location=location,
+            radius=radius)
+        itinerary.save()
+        itinerary.travellers.add(creator)
+    else:
+        itinerary = query_itinerary[0]
 
-def remove_group(request):
-    return JsonResponse({"Statue": "Incomplete"})
 
-def get_group(request):
-    return JsonResponse({"Statue": "Incomplete"})
+    # Collect initial places
+    json = GooglePlacesAPIClient.textSearch(
+        search_text='Attractions',
+        location=itinerary.location,
+        radius=itinerary.radius)
+    Attraction.createAttractionsFromJSON(json, itinerary.groupID)
+
+    return JsonResponse(itinerary.encode())
+
+def remove_itinerary(request):
+    return JsonResponse({"Status": "Unsupported"})
 
 ACCESS_TOKEN = os.environ['ACCESS_TOKEN']
 
@@ -71,11 +178,15 @@ class GooglePlacesAPIClient(object):
         pass
 
     @classmethod
-    def textSearch(self, search_text=''):
+    def textSearch(self, search_text='', location='', radius=''):
         query_params = {
             "query": urllib.quote(search_text),
             "sensor": "false",
         }
+        if len(location) > 0:
+            query_params["location"] = location
+        if len(radius) > 0:
+            query_params["radius"] = radius
         base_url = "https://maps.googleapis.com/maps/api/place/textsearch/json"
         print(query_params)
 
@@ -110,6 +221,20 @@ class GooglePlacesAPIClient(object):
 
 # All types supported by google
 # From https://developers.google.com/places/supported_types
-GOOGLE_PLACE_TYPES =  ["accounting", "airport", "amusement_park", "aquarium", "art_gallery", "atm", "bakery", "bank", "bar", "beauty_salon", "bicycle_store", "book_store", "bowling_alley", "bus_station", "cafe", "campground", "car_dealer", "car_rental", "car_repair", "car_wash", "casino", "cemetery", "church", "city_hall", "clothing_store", "convenience_store", "courthouse", "dentist", "department_store", "doctor", "electrician", "electronics_store", "embassy", "fire_station", "florist", "funeral_home", "furniture_store", "gas_station", "grocery_or_supermarket", "gym", "hair_care", "hardware_store", "hindu_temple", "home_goods_store", "hospital", "insurance_agency", "jewelry_store", "laundry", "lawyer", "library", "liquor_store", "local_government_office", "locksmith", "lodging", "meal_delivery", "meal_takeaway", "mosque", "movie_rental", "movie_theater", "moving_company", "museum", "night_club", "painter", "park", "parking", "pet_store", "pharmacy", "physiotherapist", "plumber", "police", "post_office", "real_estate_agency", "restaurant", "roofing_contractor", "rv_park", "school", "shoe_store", "shopping_mall", "spa", "stadium", "storage", "store", "subway_station", "synagogue", "taxi_stand", "train_station", "travel_agency", "university", "veterinary_care", "zoo"]
+GOOGLE_PLACE_TYPES =  ["accounting", "airport", "amusement_park", "aquarium", "art_gallery",
+"atm", "bakery", "bank", "bar", "beauty_salon", "bicycle_store", "book_store",
+"bowling_alley", "bus_station", "cafe", "campground", "car_dealer", "car_rental",
+ "car_repair", "car_wash", "casino", "cemetery", "church", "city_hall", "clothing_store",
+  "convenience_store", "courthouse", "dentist", "department_store", "doctor", "electrician",
+  "electronics_store", "embassy", "fire_station", "florist", "funeral_home", "furniture_store",
+   "gas_station", "grocery_or_supermarket", "gym", "hair_care", "hardware_store",
+   "hindu_temple", "home_goods_store", "hospital", "insurance_agency", "jewelry_store",
+    "laundry", "lawyer", "library", "liquor_store", "local_government_office", "locksmith",
+    "lodging", "meal_delivery", "meal_takeaway", "mosque", "movie_rental", "movie_theater",
+    "moving_company", "museum", "night_club", "painter", "park", "parking", "pet_store",
+     "pharmacy", "physiotherapist", "plumber", "police", "post_office", "real_estate_agency",
+      "restaurant", "roofing_contractor", "rv_park", "school", "shoe_store", "shopping_mall",
+       "spa", "stadium", "storage", "store", "subway_station", "synagogue", "taxi_stand",
+        "train_station", "travel_agency", "university", "veterinary_care", "zoo"]
 
 
