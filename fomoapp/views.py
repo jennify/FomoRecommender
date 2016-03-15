@@ -31,18 +31,25 @@ def get_recommendations(request):
         raise HttpResponseBadRequest("GET Request only.")
 
     groupID = request.GET['groupID']
-    # Support personlized recommendations to users later.
-    # email = request.GET['email']
+    email = request.GET['userEmail']
+    user = User.objects.get(email=email)
 
     response = {}
     a_list = []
     attractions = Attraction.objects.filter(groupID=groupID)
     if len(attractions) == 0:
-        print(attractions)
         raise HttpResponseBadRequest("No attractions or Invalid group ID")
+
     for a in attractions:
-        a_list.append(a.encode())
+        if user not in a.sentToClient.all():
+            a_list.append(a.encode())
+            a.sentToClient.add(user)
     response["attractions"] = a_list
+
+    if len(a_list) < 10:
+        # TODO(jlee): code to load more attractions with paging
+
+        pass
 
     return JsonResponse(response)
 
@@ -222,19 +229,19 @@ class GooglePlacesAPIClient(object):
 # All types supported by google
 # From https://developers.google.com/places/supported_types
 GOOGLE_PLACE_TYPES =  ["accounting", "airport", "amusement_park", "aquarium", "art_gallery",
-"atm", "bakery", "bank", "bar", "beauty_salon", "bicycle_store", "book_store",
-"bowling_alley", "bus_station", "cafe", "campground", "car_dealer", "car_rental",
- "car_repair", "car_wash", "casino", "cemetery", "church", "city_hall", "clothing_store",
-  "convenience_store", "courthouse", "dentist", "department_store", "doctor", "electrician",
-  "electronics_store", "embassy", "fire_station", "florist", "funeral_home", "furniture_store",
-   "gas_station", "grocery_or_supermarket", "gym", "hair_care", "hardware_store",
-   "hindu_temple", "home_goods_store", "hospital", "insurance_agency", "jewelry_store",
+    "atm", "bakery", "bank", "bar", "beauty_salon", "bicycle_store", "book_store",
+    "bowling_alley", "bus_station", "cafe", "campground", "car_dealer", "car_rental",
+    "car_repair", "car_wash", "casino", "cemetery", "church", "city_hall", "clothing_store",
+    "convenience_store", "courthouse", "dentist", "department_store", "doctor", "electrician",
+    "electronics_store", "embassy", "fire_station", "florist", "funeral_home", "furniture_store",
+    "gas_station", "grocery_or_supermarket", "gym", "hair_care", "hardware_store",
+    "hindu_temple", "home_goods_store", "hospital", "insurance_agency", "jewelry_store",
     "laundry", "lawyer", "library", "liquor_store", "local_government_office", "locksmith",
     "lodging", "meal_delivery", "meal_takeaway", "mosque", "movie_rental", "movie_theater",
     "moving_company", "museum", "night_club", "painter", "park", "parking", "pet_store",
-     "pharmacy", "physiotherapist", "plumber", "police", "post_office", "real_estate_agency",
-      "restaurant", "roofing_contractor", "rv_park", "school", "shoe_store", "shopping_mall",
-       "spa", "stadium", "storage", "store", "subway_station", "synagogue", "taxi_stand",
-        "train_station", "travel_agency", "university", "veterinary_care", "zoo"]
+    "pharmacy", "physiotherapist", "plumber", "police", "post_office", "real_estate_agency",
+    "restaurant", "roofing_contractor", "rv_park", "school", "shoe_store", "shopping_mall",
+    "spa", "stadium", "storage", "store", "subway_station", "synagogue", "taxi_stand",
+    "train_station", "travel_agency", "university", "veterinary_care", "zoo"]
 
 

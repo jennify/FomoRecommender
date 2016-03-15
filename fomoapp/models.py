@@ -5,10 +5,9 @@ from jsonfield import JSONField
 import json
 
 class User(models.Model):
-  email = models.EmailField()
-  name = models.CharField(max_length=50)
-# avatarImageUrl = models.URLField()
-# preferences = models.ManyToManyField(Preference)
+    email = models.EmailField()
+    name = models.CharField(max_length=50)
+    avatarImageUrl = models.URLField(blank=True)
 
   def encode(self):
     return {
@@ -18,6 +17,11 @@ class User(models.Model):
 
   def __repr__(self):
     return "%s:%s" % (self.name, self.email)
+
+# class Preference(models.Model):
+#     user = models.ForeignKey(User)
+#     name = models.CharField(max_length=50)
+#     rating = models.FloatField()
 
 class Attraction(models.Model):
     placeID = models.CharField(max_length=50)
@@ -118,8 +122,6 @@ class FullItinerary(models.Model):
 #     restaurants = models.ManyToManyField(Attraction)
 #     tripEvents = models.ManyToManyField(Attraction)
 
-# class Preference(models.Model):
-#   name = models.CharField(max_length=50)
 
 # class VotedEvent(models.Model):
 #   # Called trip events
