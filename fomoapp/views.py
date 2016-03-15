@@ -112,9 +112,10 @@ def update_itinerary_with_user(request):
 
     email = request.POST['userEmail']
     name = request.POST['name']
+    profileImageUrl = request.POST['profileImageUrl']
     if len(User.objects.filter(email=email)) > 0:
         raise HttpResponseBadRequest("User already exists")
-    new_traveller = User(email=email, name=name)
+    new_traveller = User(email=email, name=name, avatarImageUrl=profileImageUrl)
     new_traveller.save()
 
     itinerary.travellers.add(new_traveller)
@@ -142,6 +143,7 @@ def add_itinerary(request):
     radius = request.POST['radius']
     location = request.POST['location']
     numDays = int(request.POST['numDays'])
+    startDate = request.POST['startDate']
 
     creator = None
     existing_user = User.objects.filter(email=email)
@@ -157,6 +159,7 @@ def add_itinerary(request):
             groupID=groupID,
             tripName=tripName,
             numDays=numDays,
+            startDate=startDate,
             location=location,
             radius=radius)
         itinerary.save()

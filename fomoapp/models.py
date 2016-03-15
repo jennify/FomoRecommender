@@ -9,14 +9,15 @@ class User(models.Model):
     name = models.CharField(max_length=50)
     avatarImageUrl = models.URLField(blank=True)
 
-  def encode(self):
-    return {
-        "email": self.email,
-        "name": self.name,
-    }
+    def encode(self):
+        return {
+            "email": self.email,
+            "name": self.name,
+            "profileImageUrl": self.avatarImageUrl
+        }
 
-  def __repr__(self):
-    return "%s:%s" % (self.name, self.email)
+    def __repr__(self):
+        return "%s:%s" % (self.name, self.email)
 
 # class Preference(models.Model):
 #     user = models.ForeignKey(User)
@@ -58,11 +59,11 @@ class Attraction(models.Model):
         for v in Vote.objects.filter(attraction=self):
             user = v.user
             if v.rating > 0:
-                likes.append(user)
+                likes.append(user.encode())
             elif v.rating < 0:
-                dislikes.append(user)
+                dislikes.append(user.encode())
             elif v.rating == 0:
-                neutral.append(user)
+                neutral.append(user.encode())
 
         return {
             "placeID": self.placeID,
@@ -80,12 +81,11 @@ class FullItinerary(models.Model):
     groupID = models.CharField(max_length=50)
     travellers = models.ManyToManyField(User)
     tripName = models.CharField(max_length=50)
-    # startDate = models.DateField()
-    # endDate = models.DateField()
     location = models.CharField(max_length=50)
     radius = models.CharField(max_length=50)
     numDays = models.IntegerField()
     currentItinerary = JSONField()
+    startDate = models.CharField(max_length=50)
     # coverPhotoURL = models.URLField()
 
     def encode(self):
@@ -98,6 +98,9 @@ class FullItinerary(models.Model):
         self.refreshItinerary()
         response["itinerary"] = self.currentItinerary["itinerary"]
 
+        response["numDays"] = self.numDays
+        response["startDate"] = self.startDate
+
         return response
 
     def refreshItinerary(self):
@@ -107,7 +110,7 @@ class FullItinerary(models.Model):
             itinerary.append(a.encode())
             print a.placeID, a.aggregatedVote
         self.currentItinerary = {
-            "itinerary": json.dumps(itinerary)
+            "itinerary": itinerary
         }
         self.save()
         return itinerary
