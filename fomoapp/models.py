@@ -31,6 +31,7 @@ class Attraction(models.Model):
     sentToClient = models.ManyToManyField(User)
     aggregatedVote = models.FloatField()
     numVotes = models.IntegerField()
+    rawPlaceDetails = JSONField()
     # types = models.CharField(max_length=50) # String for Attraction Type
 
     @classmethod
@@ -54,6 +55,7 @@ class Attraction(models.Model):
         likes = []
         dislikes = []
         neutral = []
+        photos = []
         itinerary = FullItinerary.objects.get(groupID=self.groupID)
 
         for v in Vote.objects.filter(attraction=self):
@@ -65,6 +67,9 @@ class Attraction(models.Model):
             elif v.rating == 0:
                 neutral.append(user.encode())
 
+        for p in Photo.objects.filter(attraction=self):
+            photos.append(p.url)
+
         return {
             "placeID": self.placeID,
             "vote": self.aggregatedVote,
@@ -74,8 +79,21 @@ class Attraction(models.Model):
             "groupID": self.groupID,
             "rawData": self.rawData,
             "aggregatedVote": self.aggregatedVote,
+            "photos": photos,
         }
 
+class Photo(models.Model):
+    attraction = models.ForeignKey(Attraction)
+    url = models.CharField(max_length=50)
+
+    @classmethod
+    def createFromJSON(self, url, attraction):
+        p = Photo(
+            attraction= attraction,
+            url= url,
+        )
+        p.save()
+        return p
 
 class FullItinerary(models.Model):
     groupID = models.CharField(max_length=50)
@@ -108,7 +126,6 @@ class FullItinerary(models.Model):
         attractions = Attraction.objects.filter(groupID=self.groupID).order_by("-aggregatedVote")
         for a in attractions:
             itinerary.append(a.encode())
-            print a.placeID, a.aggregatedVote
         self.currentItinerary = {
             "itinerary": itinerary
         }

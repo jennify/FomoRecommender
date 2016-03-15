@@ -10,7 +10,7 @@ from django.http import (
 import urllib
 import requests
 import os
-from .models import Attraction, FullItinerary, User
+from .models import Attraction, FullItinerary, User, Photo
 
 from django.views.decorators.csrf import csrf_exempt
 
@@ -167,20 +167,38 @@ def add_itinerary(request):
     else:
         itinerary = query_itinerary[0]
 
-
     # Collect initial places
     json = GooglePlacesAPIClient.textSearch(
         search_text='Attractions',
         location=itinerary.location,
         radius=itinerary.radius)
-    Attraction.createAttractionsFromJSON(json, itinerary.groupID)
+    attractions = Attraction.createAttractionsFromJSON(json, itinerary.groupID)
+
+    # Handle photos
+    for a in attractions:
+        if len(a.rawPlaceDetails) == 0:
+            # Make place details request
+            placeDetailJSON = GooglePlacesAPIClient.placeDetails(placeid=a.placeID)
+            a.rawPlaceDetails = placeDetailJSON
+            assert "result" in placeDetailJSON
+            photosresultJson = placeDetailJSON["result"]
+
+            # Parse through all photos and request photo info for each.
+            if "photos" in photosresultJson:
+                photosJson = photosresultJson["photos"]
+                for photo in photosJson:
+                    ref = photo["photo_reference"]
+                    url = GooglePlacesAPIClient.photosURL(photoreference=ref)
+                    Photo.createFromJSON(url, a)
+            a.save()
 
     return JsonResponse(itinerary.encode())
 
 def remove_itinerary(request):
     return JsonResponse({"Status": "Unsupported"})
 
-ACCESS_TOKEN = os.environ['ACCESS_TOKEN']
+ACCESS_TOKEN = "AIzaSyAx4plxTgzdDQKElwO6ZQdR1EmxTyUu4nw"
+# ACCESS_TOKEN = os.environ['ACCESS_TOKEN']
 
 class GooglePlacesAPIClient(object):
 
@@ -198,9 +216,8 @@ class GooglePlacesAPIClient(object):
         if len(radius) > 0:
             query_params["radius"] = radius
         base_url = "https://maps.googleapis.com/maps/api/place/textsearch/json"
-        print(query_params)
 
-        return self.buildURL(base_url, query_params)
+        return self.buildURLAndRequest(base_url, query_params)
 
     @classmethod
     def placeDetails(self, placeid="ChIJN1t_tDeuEmsRUsoyG83frY4"):
@@ -208,10 +225,10 @@ class GooglePlacesAPIClient(object):
         query_params = {
             "placeid": urllib.quote(placeid),
         }
-        return self.buildURL(base_url, query_params)
+        return self.buildURLAndRequest(base_url, query_params)
 
     @classmethod
-    def photos(self, photoreference="CnRtAAAATLZNl354RwP_9UKbQ_5Psy40texXePv4oAlgP4qNEkdIrkyse7rPXYGd9D_Uj1rVsQdWT4oRz4QrYAJNpFX7rzqqMlZw2h2E2y5IKMUZ7ouD_SlcHxYq1yL4KbKUv3qtWgTK0A6QbGh87GB3sscrHRIQiG2RrmU_jF4tENr9wGS_YxoUSSDrYjWmrNfeEHSGSc3FyhNLlBU"):
+    def photosURL(self, photoreference="CnRtAAAATLZNl354RwP_9UKbQ_5Psy40texXePv4oAlgP4qNEkdIrkyse7rPXYGd9D_Uj1rVsQdWT4oRz4QrYAJNpFX7rzqqMlZw2h2E2y5IKMUZ7ouD_SlcHxYq1yL4KbKUv3qtWgTK0A6QbGh87GB3sscrHRIQiG2RrmU_jF4tENr9wGS_YxoUSSDrYjWmrNfeEHSGSc3FyhNLlBU"):
         base_url = "https://maps.googleapis.com/maps/api/place/photo"
         query_params = {
             "photoreference" : photoreference,
@@ -225,9 +242,18 @@ class GooglePlacesAPIClient(object):
         url += '?key=' + ACCESS_TOKEN
         for key, value in query_params.iteritems():
             url += "&" + key + "=" + value
+        return url
 
+    @classmethod
+    def buildURLAndRequest(self, base_url, query_params={}):
+        url = self.buildURL(base_url, query_params)
+        print "REQUEST: ", url
         response = requests.get(url)
-        return response.json()
+        print "RESPONSE: ", response
+        json = response.json()
+        if json["status"] == "OVER_QUERY_LIMIT":
+            raise HttpResponseBadRequest("Over Google query limit")
+        return json
 
 # All types supported by google
 # From https://developers.google.com/places/supported_types
