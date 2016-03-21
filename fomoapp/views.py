@@ -32,8 +32,14 @@ def get_recommendations(request):
 
     groupID = request.GET['groupID']
     email = request.GET['userEmail']
-    user = User.objects.get(email=email)
+    name = request.GET['name']
+    profileImageUrl = request.GET['profileImageUrl']
 
+    user = User.objects.filter(email=email)
+    if len(user) == 0 :
+        user = get_or_create_user(groupID, email, name, profileImageUrl)
+    else:
+        user = user[0]
     response = {}
     a_list = []
     attractions = Attraction.objects.filter(groupID=groupID)
@@ -41,7 +47,8 @@ def get_recommendations(request):
         raise HttpResponseBadRequest("No attractions or Invalid group ID")
 
     for a in attractions:
-        if user not in a.sentToClient.all():
+        if True:
+        # if user not in a.sentToClient.all():
             a_list.append(a.encode())
             a.sentToClient.add(user)
     response["attractions"] = a_list
@@ -108,20 +115,33 @@ def update_itinerary_with_user(request):
         raise HttpResponseBadRequest("POST Request only.")
 
     groupID = request.POST['groupID']
-    itinerary = FullItinerary.objects.filter(groupID=groupID)[0]
 
     email = request.POST['userEmail']
     name = request.POST['name']
     profileImageUrl = request.POST['profileImageUrl']
-    if len(User.objects.filter(email=email)) > 0:
-        raise HttpResponseBadRequest("User already exists")
-    new_traveller = User(email=email, name=name, avatarImageUrl=profileImageUrl)
-    new_traveller.save()
+    new_traveller = get_or_create_user(groupID, email, name, profileImageUrl)
 
+    itinerary = get_or_create_itinerary(groupID)
     itinerary.travellers.add(new_traveller)
     itinerary.save()
 
     return JsonResponse(itinerary.encode())
+
+def get_or_create_itinerary(groupID):
+    its = FullItinerary.objects.filter(groupID=groupID)
+    if len(its) == 0:
+        raise HttpResponseBadRequest("Call add itinerary first")
+    else:
+        return its[0]
+
+def get_or_create_user(groupID, email, name, profileImageUrl):
+    users = User.objects.filter(email=email)
+    if len(users) > 0:
+        return users[0]
+    new_traveller = User(email=email, name=name, avatarImageUrl=profileImageUrl)
+    new_traveller.save()
+
+    return new_traveller
 
 def get_itinerary(request):
     if request.method != "GET":
