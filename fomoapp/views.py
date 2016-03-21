@@ -197,8 +197,8 @@ def add_itinerary(request):
 def remove_itinerary(request):
     return JsonResponse({"Status": "Unsupported"})
 
-ACCESS_TOKEN = "AIzaSyAx4plxTgzdDQKElwO6ZQdR1EmxTyUu4nw"
-# ACCESS_TOKEN = os.environ['ACCESS_TOKEN']
+# ACCESS_TOKEN = "AIzaSyAx4plxTgzdDQKElwO6ZQdR1EmxTyUu4nw"
+ACCESS_TOKEN = os.environ['ACCESS_TOKEN']
 
 class GooglePlacesAPIClient(object):
 
