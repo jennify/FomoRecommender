@@ -4,14 +4,13 @@ from django.shortcuts import render
 from django.http import (
     HttpResponse,
     JsonResponse,
-    HttpResponseBadRequest,
 )
 
 import urllib
 import requests
 import os
 from .models import Attraction, FullItinerary, User, Photo
-
+from django.core.exceptions import SuspiciousOperation
 from django.views.decorators.csrf import csrf_exempt
 
 def index(request):
@@ -28,7 +27,7 @@ def testGooglePlaces(request):
 
 def get_recommendations(request):
     if request.method != "GET":
-        raise HttpResponseBadRequest("GET Request only.")
+        raise SuspiciousOperation("GET Request only.")
 
     groupID = request.GET['groupID']
     email = request.GET['userEmail']
@@ -44,7 +43,7 @@ def get_recommendations(request):
     a_list = []
     attractions = Attraction.objects.filter(groupID=groupID)
     if len(attractions) == 0:
-        raise HttpResponseBadRequest("No attractions or Invalid group ID")
+        raise SuspiciousOperation("No attractions or Invalid group ID")
 
     for a in attractions:
         if True:
@@ -62,7 +61,7 @@ def get_recommendations(request):
 
 def get_itineraries_for_user(request):
     if request.method != "GET":
-        raise HttpResponseBadRequest("GET Request only.")
+        raise SuspiciousOperation("GET Request only.")
 
     userEmail = request.GET['userEmail']
     itineraries = FullItinerary.objects.filter(travellers__email=userEmail)
@@ -71,10 +70,12 @@ def get_itineraries_for_user(request):
         i_list.append(i.encode())
     return JsonResponse({"itineraries": i_list})
 
+
+
 @csrf_exempt
 def update_itinerary_with_vote(request):
     if request.method != "POST":
-        raise HttpResponseBadRequest("POST Request only.")
+        raise SuspiciousOperation("POST Request only.")
 
     groupID = request.POST['groupID']
     placeID = request.POST['placeID']
@@ -90,7 +91,7 @@ def update_itinerary_with_vote(request):
     elif 'neutral' in request.POST:
         vote_points = 0.0
     else:
-        raise HttpResponseBadRequest("Invalid Vote")
+        raise SuspiciousOperation("Invalid Vote")
 
     vote = Vote.castVote(
         attraction=attraction,
@@ -104,7 +105,7 @@ def update_itinerary_with_vote(request):
 @csrf_exempt
 def update_itinerary_with_preference(request):
     if request.method != "POST":
-        raise HttpResponseBadRequest("POST Request only.")
+        raise SuspiciousOperation("POST Request only.")
     raise NotImplemented()
     json = FullItinerary.objects.filter(groupID=groupID)[0].encode()
     return JsonResponse(json)
@@ -112,7 +113,7 @@ def update_itinerary_with_preference(request):
 @csrf_exempt
 def update_itinerary_with_user(request):
     if request.method != "POST":
-        raise HttpResponseBadRequest("POST Request only.")
+        raise SuspiciousOperation("POST Request only.")
 
     groupID = request.POST['groupID']
 
@@ -130,7 +131,7 @@ def update_itinerary_with_user(request):
 def get_or_create_itinerary(groupID):
     its = FullItinerary.objects.filter(groupID=groupID)
     if len(its) == 0:
-        raise HttpResponseBadRequest("Call add itinerary first")
+        raise SuspiciousOperation("Call add itinerary first")
     else:
         return its[0]
 
@@ -145,7 +146,7 @@ def get_or_create_user(groupID, email, name, profileImageUrl):
 
 def get_itinerary(request):
     if request.method != "GET":
-        raise HttpResponseBadRequest("GET Request only.")
+        raise SuspiciousOperation("GET Request only.")
 
     groupID = request.GET['groupID']
     json = FullItinerary.objects.filter(groupID=groupID)[0].encode()
@@ -154,7 +155,7 @@ def get_itinerary(request):
 @csrf_exempt
 def add_itinerary(request):
     if request.method != "POST":
-        raise HttpResponseBadRequest("POST Request only.")
+        raise SuspiciousOperation("POST Request only.")
 
     groupID = request.POST['groupID']
     tripName = request.POST['tripName']
@@ -218,8 +219,8 @@ def add_itinerary(request):
 def remove_itinerary(request):
     return JsonResponse({"Status": "Unsupported"})
 
-ACCESS_TOKEN = "AIzaSyAx4plxTgzdDQKElwO6ZQdR1EmxTyUu4nw"
-# ACCESS_TOKEN = os.environ['ACCESS_TOKEN']
+# ACCESS_TOKEN = "AIzaSyAx4plxTgzdDQKElwO6ZQdR1EmxTyUu4nw"
+ACCESS_TOKEN = os.environ['ACCESS_TOKEN']
 
 class GooglePlacesAPIClient(object):
 
@@ -273,7 +274,7 @@ class GooglePlacesAPIClient(object):
         print "RESPONSE: ", response
         json = response.json()
         if json["status"] == "OVER_QUERY_LIMIT":
-            raise HttpResponseBadRequest("Over Google query limit")
+            raise SuspiciousOperation("Over Google query limit")
         return json
 
 # All types supported by google
