@@ -159,6 +159,7 @@ def add_itinerary(request):
     groupID = request.POST['groupID']
     tripName = request.POST['tripName']
     email = request.POST['userEmail']
+    profileImageUrl = request.POST['profileImageUrl']
     name = request.POST['name']
     radius = request.POST['radius']
     location = request.POST['location']
@@ -168,7 +169,7 @@ def add_itinerary(request):
     creator = None
     existing_user = User.objects.filter(email=email)
     if len(existing_user) <= 0:
-        creator = User(email=email, name=name)
+        creator = User(email=email, name=name, avatarImageUrl=profileImageUrl)
         creator.save()
     else:
         creator = existing_user[0]
