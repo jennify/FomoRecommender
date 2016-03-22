@@ -281,7 +281,7 @@ class GooglePlacesAPIClient(object):
             ACCESS_TOKEN = ACCESS_TOKENS[index % len(ACCESS_TOKENS)]
             ACCESS_TOKEN_INDEX = ACCESS_TOKEN_INDEX + 1
             json = response.json()
-            if json["status"] == "OVER_QUERY_LIMIT"
+            if json["status"] == "OVER_QUERY_LIMIT":
                 raise SuspiciousOperation("Over Google query limit")
             else:
                 return json
