@@ -218,8 +218,12 @@ def add_itinerary(request):
 
 def remove_itinerary(request):
     return JsonResponse({"Status": "Unsupported"})
-
-# ACCESS_TOKEN = "AIzaSyAx4plxTgzdDQKElwO6ZQdR1EmxTyUu4nw"
+ACCESS_TOKENS = [
+    "AIzaSyAx4plxTgzdDQKElwO6ZQdR1EmxTyUu4nw", # new
+    "AIzaSyDQ0zLMHG20MOUjS7TuPIDrtXK9A64Zxug", # old
+    "AIzaSyAMb_CXFPnuPJL5RUKwWxyooOx7K-JaCys", # oldest
+]
+ACCESS_TOKEN_INDEX = 0
 ACCESS_TOKEN = os.environ['ACCESS_TOKEN']
 
 class GooglePlacesAPIClient(object):
@@ -274,7 +278,13 @@ class GooglePlacesAPIClient(object):
         print "RESPONSE: ", response
         json = response.json()
         if json["status"] == "OVER_QUERY_LIMIT":
-            raise SuspiciousOperation("Over Google query limit")
+            ACCESS_TOKEN = ACCESS_TOKENS[index % len(ACCESS_TOKENS)]
+            ACCESS_TOKEN_INDEX = ACCESS_TOKEN_INDEX + 1
+            json = response.json()
+            if json["status"] == "OVER_QUERY_LIMIT"
+                raise SuspiciousOperation("Over Google query limit")
+            else:
+                return json
         return json
 
 # All types supported by google
