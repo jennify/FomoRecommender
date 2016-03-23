@@ -104,6 +104,7 @@ class FullItinerary(models.Model):
     numDays = models.IntegerField()
     currentItinerary = JSONField()
     startDate = models.CharField(max_length=50)
+    createDate = models.CharField(max_length=50)
     # coverPhotoURL = models.URLField()
 
     def encode(self):
@@ -118,6 +119,7 @@ class FullItinerary(models.Model):
 
         response["numDays"] = self.numDays
         response["startDate"] = self.startDate
+        response["createDate"] = self.createDate
 
         return response
 

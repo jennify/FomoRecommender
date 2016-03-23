@@ -166,6 +166,7 @@ def add_itinerary(request):
     location = request.POST['location']
     numDays = int(request.POST['numDays'])
     startDate = request.POST['startDate']
+    createDate = request.POST['createDate']
 
     creator = None
     existing_user = User.objects.filter(email=email)
@@ -182,6 +183,7 @@ def add_itinerary(request):
             tripName=tripName,
             numDays=numDays,
             startDate=startDate,
+            createDate=createDate,
             location=location,
             radius=radius)
         itinerary.save()
