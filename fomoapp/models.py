@@ -72,6 +72,7 @@ class Attraction(models.Model):
         merged_raw_data = self.rawData
         if len(self.rawPlaceDetails) > 0:
             copy_place_details = self.rawPlaceDetails["result"].copy()
+            merged_raw_data.update(copy_place_details)
 
         return {
             "placeID": self.placeID,
