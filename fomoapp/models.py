@@ -32,7 +32,6 @@ class Attraction(models.Model):
     aggregatedVote = models.FloatField()
     numVotes = models.IntegerField()
     rawPlaceDetails = JSONField()
-    # types = models.CharField(max_length=50) # String for Attraction Type
 
     @classmethod
     def createAttractionsFromJSON(self, json, groupID="FakeGroupID"):
@@ -70,6 +69,10 @@ class Attraction(models.Model):
         for p in Photo.objects.filter(attraction=self):
             photos.append(p.url)
 
+        merged_raw_data = self.rawData
+        if len(self.rawPlaceDetails) > 0:
+            copy_place_details = self.rawPlaceDetails["result"].copy()
+
         return {
             "placeID": self.placeID,
             "vote": self.aggregatedVote,
@@ -105,7 +108,6 @@ class FullItinerary(models.Model):
     currentItinerary = JSONField()
     startDate = models.CharField(max_length=50)
     createDate = models.CharField(max_length=50)
-    # coverPhotoURL = models.URLField()
 
     def encode(self):
         response = {"groupID": self.groupID, "tripName": self.tripName}
