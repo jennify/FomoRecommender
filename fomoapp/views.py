@@ -9,7 +9,7 @@ from django.http import (
 import urllib
 import requests
 import os
-from .models import Attraction, FullItinerary, User, Photo
+from .models import Attraction, FullItinerary, User, Photo, Vote
 from django.core.exceptions import SuspiciousOperation
 from django.views.decorators.csrf import csrf_exempt
 
@@ -81,7 +81,7 @@ def update_itinerary_with_vote(request):
     placeID = request.POST['placeID']
     userEmail = request.POST['userEmail']
     user = User.objects.get(email=userEmail)
-    attraction = Attraction.objects.get(placeID=placeID, groupID=groupID)[0]
+    attraction = Attraction.objects.get(placeID=placeID, groupID=groupID)
 
     vote_points = 0
     if 'like' in request.POST:
@@ -96,7 +96,8 @@ def update_itinerary_with_vote(request):
     vote = Vote.castVote(
         attraction=attraction,
         rating=vote_points,
-        user=user)
+        voting_user=user
+        )
 
     json = FullItinerary.objects.filter(groupID=groupID)[0].encode()
     json["itinerary"]

@@ -160,21 +160,21 @@ class FullItinerary(models.Model):
 class Vote(models.Model):
     attraction = models.ForeignKey(Attraction)
     rating = models.FloatField()
-    user = models.OneToOneField(User)
+    user = models.ForeignKey(User)
 
     @classmethod
-    def castVote(self, attraction, rating, user):
+    def castVote(self, attraction, rating, voting_user):
         v = Vote(
             attraction=attraction,
-            rating=vote_points,
-            user=user)
+            rating=rating,
+            user=voting_user)
         v.save()
 
         oldNumVotes = attraction.numVotes
         attraction.numVotes = oldNumVotes + 1
 
         sumOfOldVotes = attraction.aggregatedVote * oldNumVotes
-        attraction.aggregatedVote = (sumOfOldVotes + vote_points) / (oldNumVotes + 1)
+        attraction.aggregatedVote = (sumOfOldVotes + rating) / (oldNumVotes + 1)
 
         attraction.save()
 
