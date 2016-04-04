@@ -164,10 +164,19 @@ class Vote(models.Model):
 
     @classmethod
     def castVote(self, attraction, rating, voting_user):
-        v = Vote(
+        existing_votes = Vote.objects.filter(
             attraction=attraction,
             rating=rating,
             user=voting_user)
+        if len(existing_votes) > 0:
+            print existing_votes
+            v = existing_votes[0]
+            v.rating = rating
+        else:
+            v = Vote(
+                attraction=attraction,
+                rating=rating,
+                user=voting_user)
         v.save()
 
         oldNumVotes = attraction.numVotes
